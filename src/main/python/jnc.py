@@ -181,6 +181,13 @@ class JNCPlugin(plugin.PyangPlugin):
         fd      -- File descriptor (ignored).
 
         """
+
+        for m in modules:
+            print(m.arg)
+            for s in m.substmts:
+                if s.arg == 'bbf-fiber-traffic-descriptor-profile-body':
+                    print(s.arg)
+
         if ctx.opts.debug or ctx.opts.verbose:
             print('JNC plugin starting')
         if not ctx.opts.ignore:
@@ -456,7 +463,7 @@ def print_warning(msg='', key='', ctx=None):
     if ((not key or key not in outputted_warnings) and
         (not ctx or ctx.opts.debug or ctx.opts.verbose)):
         if msg:
-            sys.stderr.write('WARNING: ' + msg)
+            sys.stderr.write('WARNING: ' + msg + '\n')
             if key:
                 outputted_warnings.append(key)
         else:
@@ -511,6 +518,10 @@ def get_module(stmt):
         for (module_name, revision) in stmt.i_ctx.modules:
             if module_name == belongs_to.arg:
                 return stmt.i_ctx.modules[(module_name, revision)]
+    if stmt.i_module:
+        return stmt.i_module
+    else:
+        return None
 
 
 def get_parent(stmt):
@@ -981,11 +992,15 @@ class ClassGenerator(object):
                     setattr(self, attr, getattr(parent, attr))
 
             module = get_module(stmt)
+            if module:
+                modulename = module.arg
+            else:
+                modulename = stmt.i_module.i_modulename
             if self.ctx.rootpkg:
                 self.rootpkg = '.'.join([self.ctx.rootpkg.replace(os.sep, '.'),
-                                         camelize(module.arg)])
+                                         camelize(modulename)])
             else:
-                self.rootpkg = camelize(module.arg)
+                self.rootpkg = camelize(modulename)
         else:
             self.rootpkg = package
 
@@ -1881,6 +1896,8 @@ class MethodGenerator(object):
 
         self.ctx = ctx
         self.module_stmt = get_module(stmt)
+        if not self.module_stmt:
+            pass
         prefix = search_one(self.module_stmt, 'prefix')
         self.root = normalize(prefix.arg)
 
